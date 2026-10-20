@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 	"unicode/utf8"
 )
 
@@ -72,6 +73,24 @@ func validasiSumberDaya(sd *SumberDaya) string {
 	return ""
 }
 
+func validasiPeminjaman(p *Peminjaman) string {
+	p.Peminjam = strings.TrimSpace(p.Peminjam)
+	p.Tanggal = strings.TrimSpace(p.Tanggal)
+	if p.Peminjam == "" {
+		return "peminjam wajib diisi"
+	}
+	if utf8.RuneCountInString(p.Peminjam) > 50 {
+		return "peminjam maksimal 50 karakter"
+	}
+	if _, err := time.Parse("2006-01-02", p.Tanggal); err != nil {
+		return "tanggal harus berformat YYYY-MM-DD dan tanggal yang valid"
+	}
+	if p.SlotMulai < 1 || p.SlotSelesai > 8 || p.SlotMulai > p.SlotSelesai {
+		return "slot harus 1 sampai 8 dan slot_mulai tidak boleh lebih besar dari slot_selesai"
+	}
+	return ""
+}
+
 func (s *store) tambahSumberDaya(sd SumberDaya) SumberDaya {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -114,15 +133,21 @@ func (s *store) detailSumberDaya(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, s.sumberDaya[id-1])
 }
 
-func (s *store) tambahPeminjaman(p Peminjaman) Peminjaman {
+func (s *store) tambahPeminjaman(p Peminjaman) (Peminjaman, string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	if p.SumberDayaID < 1 || p.SumberDayaID > len(s.sumberDaya) {
+		return Peminjaman{}, "sumber_daya_id tidak ditemukan"
+	}
+	if p.Jumlah < 1 || p.Jumlah > s.sumberDaya[p.SumberDayaID-1].Stok {
+		return Peminjaman{}, "jumlah harus antara 1 dan stok sumber daya"
+	}
 	p.ID = s.nextPeminjamanID
 	s.nextPeminjamanID++
 	p.Status = "aktif"
 	p.PaketID = 0
 	s.peminjaman = append(s.peminjaman, p)
-	return p
+	return p, ""
 }
 
 func (s *store) buatPeminjaman(w http.ResponseWriter, r *http.Request) {
@@ -131,7 +156,16 @@ func (s *store) buatPeminjaman(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "body tidak valid")
 		return
 	}
-	writeJSON(w, http.StatusCreated, s.tambahPeminjaman(p))
+	if pesan := validasiPeminjaman(&p); pesan != "" {
+		writeError(w, http.StatusBadRequest, pesan)
+		return
+	}
+	hasil, pesan := s.tambahPeminjaman(p)
+	if pesan != "" {
+		writeError(w, http.StatusBadRequest, pesan)
+		return
+	}
+	writeJSON(w, http.StatusCreated, hasil)
 }
 
 func (s *store) daftarPeminjaman(w http.ResponseWriter, r *http.Request) {
