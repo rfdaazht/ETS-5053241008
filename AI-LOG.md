@@ -4,10 +4,10 @@ Catat setiap penggunaan AI yang menghasilkan kode. Jika tidak memakai AI sama se
 
 Log yang jujur tidak mengurangi nilai, sebanyak apa pun AI dipakai. Yang mengurangi nilai adalah log yang tidak sesuai dengan kode, atau isi log yang tidak bisa dijelaskan.
 
-## (Nama fitur atau fungsi, misalnya: Deteksi bentrok slot, B5)
-- Prompt: (ringkas, apa yang kamu minta)
-- Dipakai: (bagian kode yang kamu ambil, misalnya nama fungsi dan file)
-- Diubah: (apa yang kamu ubah atau perbaiki dari hasil AI, dan kenapa)
+## Sumber daya (B1)
+- Prompt: minta kode B1 (buat, daftar, detail sumber daya) dengan Go net/http
+- Dipakai: struct SumberDaya, validasiSumberDaya, handler buat/daftar/detail di main.go
+- Diubah: versi pertama memakai input struct dengan pointer dan unlock manual. Saya minta disederhanakan, sehingga decode langsung ke SumberDaya (karena nilai kosong sudah tidak valid, hasilnya tetap 400) dan memakai defer untuk unlock. Hasilnya saya uji dengan curl, semua sesuai kontrak.
 
 ## (Entri berikutnya)
 - Prompt:
