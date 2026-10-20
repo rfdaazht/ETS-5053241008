@@ -9,7 +9,7 @@ Log yang jujur tidak mengurangi nilai, sebanyak apa pun AI dipakai. Yang mengura
 - Dipakai: struct SumberDaya, validasiSumberDaya, handler buat/daftar/detail di main.go
 - Diubah: versi pertama memakai input struct dengan pointer dan unlock manual. Saya minta disederhanakan, sehingga decode langsung ke SumberDaya (karena nilai kosong sudah tidak valid, hasilnya tetap 400) dan memakai defer untuk unlock. Hasilnya saya uji dengan curl, semua sesuai kontrak.
 
-## (Entri berikutnya)
-- Prompt:
-- Dipakai:
-- Diubah:
+## Buat peminjaman (B2)
+- Prompt: minta kode B2 (POST /peminjaman) dengan Go net/http, hanya menyimpan data dan memberi id serta status aktif.
+- Dipakai: struct Peminjaman, tambahPeminjaman, buatPeminjaman, dan route POST /peminjaman di main.go.
+- Diubah: versi awal punya field nextPaketID di store sementara fitur paket belum dikerjakan. Saya hapus dan akan menambahkannya saat mengerjakan fitur paket. Hasilnya saya uji dengan curl: 201, id 1, status "aktif", paket_id 0.

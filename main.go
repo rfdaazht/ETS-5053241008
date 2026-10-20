@@ -17,13 +17,31 @@ type SumberDaya struct {
 	Stok  int    `json:"stok"`
 }
 
+type Peminjaman struct {
+	ID           int    `json:"id"`
+	SumberDayaID int    `json:"sumber_daya_id"`
+	Peminjam     string `json:"peminjam"`
+	Tanggal      string `json:"tanggal"`
+	SlotMulai    int    `json:"slot_mulai"`
+	SlotSelesai  int    `json:"slot_selesai"`
+	Jumlah       int    `json:"jumlah"`
+	Status       string `json:"status"`
+	PaketID      int    `json:"paket_id"`
+}
+
 type store struct {
-	mu         sync.Mutex
-	sumberDaya []SumberDaya
+	mu               sync.Mutex
+	sumberDaya       []SumberDaya
+	peminjaman       []Peminjaman
+	nextPeminjamanID int
 }
 
 func newStore() *store {
-	return &store{sumberDaya: make([]SumberDaya, 0)}
+	return &store{
+		sumberDaya:       make([]SumberDaya, 0),
+		peminjaman:       make([]Peminjaman, 0),
+		nextPeminjamanID: 1,
+	}
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -96,12 +114,33 @@ func (s *store) detailSumberDaya(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, s.sumberDaya[id-1])
 }
 
+func (s *store) tambahPeminjaman(p Peminjaman) Peminjaman {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	p.ID = s.nextPeminjamanID
+	s.nextPeminjamanID++
+	p.Status = "aktif"
+	p.PaketID = 0
+	s.peminjaman = append(s.peminjaman, p)
+	return p
+}
+
+func (s *store) buatPeminjaman(w http.ResponseWriter, r *http.Request) {
+	var p Peminjaman
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		writeError(w, http.StatusBadRequest, "body tidak valid")
+		return
+	}
+	writeJSON(w, http.StatusCreated, s.tambahPeminjaman(p))
+}
+
 func NewHandler() http.Handler {
 	s := newStore()
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /sumber-daya", s.buatSumberDaya)
 	mux.HandleFunc("GET /sumber-daya", s.daftarSumberDaya)
 	mux.HandleFunc("GET /sumber-daya/{id}", s.detailSumberDaya)
+	mux.HandleFunc("POST /peminjaman", s.buatPeminjaman)
 	return mux
 }
 
