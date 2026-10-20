@@ -134,6 +134,57 @@ func (s *store) buatPeminjaman(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, s.tambahPeminjaman(p))
 }
 
+func (s *store) daftarPeminjaman(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+
+	adaSumberDaya := q.Has("sumber_daya_id")
+	sumberDayaID := 0
+	if adaSumberDaya {
+		id, err := strconv.Atoi(q.Get("sumber_daya_id"))
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "sumber_daya_id harus berupa angka")
+			return
+		}
+		sumberDayaID = id
+	}
+	tanggal := q.Get("tanggal")
+	status := q.Get("status")
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	hasil := make([]Peminjaman, 0)
+	for _, p := range s.peminjaman {
+		if adaSumberDaya && p.SumberDayaID != sumberDayaID {
+			continue
+		}
+		if tanggal != "" && p.Tanggal != tanggal {
+			continue
+		}
+		if status != "" && p.Status != status {
+			continue
+		}
+		hasil = append(hasil, p)
+	}
+	writeJSON(w, http.StatusOK, hasil)
+}
+
+func (s *store) detailPeminjaman(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id harus berupa angka")
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, p := range s.peminjaman {
+		if p.ID == id {
+			writeJSON(w, http.StatusOK, p)
+			return
+		}
+	}
+	writeError(w, http.StatusNotFound, "peminjaman tidak ditemukan")
+}
+
 func NewHandler() http.Handler {
 	s := newStore()
 	mux := http.NewServeMux()
@@ -141,6 +192,8 @@ func NewHandler() http.Handler {
 	mux.HandleFunc("GET /sumber-daya", s.daftarSumberDaya)
 	mux.HandleFunc("GET /sumber-daya/{id}", s.detailSumberDaya)
 	mux.HandleFunc("POST /peminjaman", s.buatPeminjaman)
+	mux.HandleFunc("GET /peminjaman", s.daftarPeminjaman)
+	mux.HandleFunc("GET /peminjaman/{id}", s.detailPeminjaman)
 	return mux
 }
 
